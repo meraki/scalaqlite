@@ -26,7 +26,19 @@ public class Sqlite3C {
     public static final int BLOB = 4;
     public static final int NULL = 5;
 
-    native static public int open(String path, long[] db);
+    // Flags to pass into open_v2
+    // Refer to [https://www.sqlite.org/c3ref/c_open_autoproxy.html]
+    public static final int SQLITE_OPEN_READONLY     = 0x00000001;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_READWRITE    = 0x00000002;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_CREATE       = 0x00000004;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_URI          = 0x00000040;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_MEMORY       = 0x00000080;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_NOMUTEX      = 0x00008000;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_FULLMUTEX    = 0x00010000;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_SHAREDCACHE  = 0x00020000;  /* Ok for sqlite3_open_v2() */
+    public static final int SQLITE_OPEN_PRIVATECACHE = 0x00040000;  /* Ok for sqlite3_open_v2() */
+
+    native static public int open_v2(String path, long[] db, int flags, String vfs);
     native static public int close(long db);
     native static public int enable_load_extension(long db, int onoff);
     native static public int prepare_v2(long db, String sql, long[] stmt);
