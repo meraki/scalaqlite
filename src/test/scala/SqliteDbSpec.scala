@@ -10,6 +10,12 @@ import org.scalatest.Matchers
 class SqliteDbSpec extends FlatSpec with Matchers {
     val db = new SqliteDb(":memory:")
 
+    "database connections" should "work in multithreaded mode" in  {
+      val db2 = new SqliteDb(":memory:", SqlThreadingMode.Multithread)
+      db2.execute("CREATE TABLE foo (i INTEGER, f DOUBLE, t TEXT);")
+      db2.execute("INSERT INTO foo (i, f, t) VALUES (1, 2.0, 'foo');")
+    }
+
     "CREATE TABLE" should "not throw any exceptions" in {
         db.execute("CREATE TABLE foo (i INTEGER, f DOUBLE, t TEXT);")
     }

@@ -7,6 +7,12 @@ package org.srhea.scalaqlite
 
 class SqlException(msg: String) extends Exception(msg)
 
+sealed trait SqlThreadingMode
+object SqlThreadingMode {
+  case object Multithread extends SqlThreadingMode
+  case object Default extends SqlThreadingMode
+}
+
 abstract class SqlValue {
   def toDouble: Double = throw new SqlException(toString + " is not a double")
   def toInt: Int = throw new SqlException(toString + " is not an int")
@@ -99,9 +105,13 @@ class SqliteResultIterator(db: SqliteDb, private val stmt: Long)
     }
 }
 
-class SqliteDb(path: String) {
+class SqliteDb(path: String, mode: SqlThreadingMode = SqlThreadingMode.Default) {
     private val db = Array(0L)
-    Sqlite3C.open(path, db) ensuring (_ == Sqlite3C.OK, errmsg)
+    private val flags = mode match {
+      case SqlThreadingMode.Multithread => Sqlite3C.MULTITHREAD
+      case SqlThreadingMode.Default => Sqlite3C.DEFAULT
+    }
+    Sqlite3C.open_v2(path, db, flags, null) ensuring (_ == Sqlite3C.OK, errmsg)
     def close() {
         assert(db(0) != 0, "already closed")
         Sqlite3C.close(db(0)) ensuring (_ == Sqlite3C.OK, errmsg)

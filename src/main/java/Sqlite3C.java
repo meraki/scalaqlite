@@ -26,7 +26,12 @@ public class Sqlite3C {
     public static final int BLOB = 4;
     public static final int NULL = 5;
 
-    native static public int open(String path, long[] db);
+    // Flags to pass into open_v2
+    // Refer to [https://www.sqlite.org/c3ref/c_open_autoproxy.html]
+    public static final int MULTITHREAD = 0x00008002;
+    public static final int DEFAULT     = 0x00000002;
+
+    native static public int open_v2(String path, long[] db, int flags, String vfs);
     native static public int close(long db);
     native static public int enable_load_extension(long db, int onoff);
     native static public int prepare_v2(long db, String sql, long[] stmt);
