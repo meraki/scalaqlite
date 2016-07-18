@@ -28,7 +28,7 @@ libscalaqlite.so: Sqlite3C.cc Sqlite3C.h
 	g++ -O2 -o $@ -shared -Wl,-soname,libscalaqlite.so \
 	        -I$(JAVA_HOME)/include \
 	        -I$(JAVA_HOME)/include/linux \
-		$< -static -lc -lsqlite3
+		$< -lc -lsqlite3 -fPIC
 
 libscalaqlite.dylib: Sqlite3C.cc Sqlite3C.h
 	g++ -O2 -dynamiclib -o $@ \
