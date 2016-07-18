@@ -14,17 +14,19 @@
 #include <sqlite3.h>
 
 JNIEXPORT jint JNICALL
-Java_org_srhea_scalaqlite_Sqlite3C_open(JNIEnv *env, jclass cls, jstring jpath, jlongArray jdb)
+Java_org_srhea_scalaqlite_Sqlite3C_open_1v2(JNIEnv *env, jclass cls, jstring jpath, jlongArray jdb, jint flags, jstring jvfs)
 {
     jboolean iscopy;
     const char *cpath = env->GetStringUTFChars(jpath, &iscopy);
+    const char *cvfs = jvfs == NULL ? NULL : env->GetStringUTFChars(jvfs, &iscopy);
     sqlite3 *db;
-    jint r = sqlite3_open(cpath, &db);
+    jint r = sqlite3_open_v2(cpath, &db, flags, cvfs);
     if (r == SQLITE_OK) {
         jlong a[] = {(jlong) db};
         env->SetLongArrayRegion(jdb, 0, 1, a);
     }
     env->ReleaseStringUTFChars(jpath, cpath);
+    env->ReleaseStringUTFChars(jvfs, cvfs);
     return r;
 }
 

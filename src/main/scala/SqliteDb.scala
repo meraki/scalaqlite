@@ -99,9 +99,14 @@ class SqliteResultIterator(db: SqliteDb, private val stmt: Long)
     }
 }
 
-class SqliteDb(path: String) {
+object SqliteDb {
+    import Sqlite3C._
+    final val BaseFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+}
+
+class SqliteDb(path: String, flags: Int = SqliteDb.BaseFlags) {
     private val db = Array(0L)
-    Sqlite3C.open(path, db) ensuring (_ == Sqlite3C.OK, errmsg)
+    Sqlite3C.open_v2(path, db, flags, null) ensuring (_ == Sqlite3C.OK, errmsg)
     def close() {
         assert(db(0) != 0, "already closed")
         Sqlite3C.close(db(0)) ensuring (_ == Sqlite3C.OK, errmsg)
