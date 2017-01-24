@@ -2,7 +2,7 @@ name := "scalaqlite"
 
 organization := "com.meraki"
 
-version := "0.8-RC1"
+version := "0.8-RC2"
 
 scalaVersion := "2.11.7"
 
