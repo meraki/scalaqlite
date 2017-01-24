@@ -6,6 +6,7 @@
 package org.srhea.scalaqlite
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
+import scala.util.{ Failure, Try }
 
 class SqliteDbSpec extends FlatSpec with Matchers {
     val db = new SqliteDb(":memory:")
@@ -145,5 +146,14 @@ class SqliteDbSpec extends FlatSpec with Matchers {
       db.getRows("SELECT * FROM null_test WHERE x = 1").head should equal (Seq(SqlLong(1), SqlNull))
       db.getRows("SELECT * FROM null_test WHERE x = 2").head should equal (Seq(SqlLong(2), SqlNull))
       db.getRows("SELECT * FROM null_test WHERE y IS NOT NULL").head should equal (Seq(SqlNull, SqlLong(3)))
+    }
+
+    "Error messages" should "contain accurate descriptions" in {
+      db.execute("CREATE TABLE error_test (x PRIMARY KEY)")
+      db.execute("INSERT INTO error_test VALUES (1)")
+      val Failure(SqlException(msg)) = Try(db.execute("INSERT INTO error_test VALUES (1)"))
+      msg should include ("Abort due to constraint violation")
+      msg should include ("UNIQUE constraint failed: error_test.x")
+      val Failure(SqlException(msg2)) = Try(db.foreachRow("SELECT * FROM blah_blah")(_ => 1))
     }
 }

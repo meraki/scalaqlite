@@ -5,13 +5,13 @@
 
 package org.srhea.scalaqlite
 
-class SqlException(msg: String) extends Exception(msg)
+case class SqlException(msg: String) extends RuntimeException(msg)
 
 abstract class SqlValue {
-  def toDouble: Double = throw new SqlException(toString + " is not a double")
-  def toInt: Int = throw new SqlException(toString + " is not an int")
-  def toLong: Long = throw new SqlException(toString + " is not an long")
-  def toBlob: Seq[Byte] = throw new SqlException(toString + " is not a blob")
+  def toDouble: Double = throw SqlException(s"$this is not a double")
+  def toInt: Int = throw SqlException(s"$this is not an int")
+  def toLong: Long = throw SqlException(s"$this is not an long")
+  def toBlob: Seq[Byte] = throw SqlException(s"$this is not a blob")
   def isNull = false
   def bindValue(stmt: Long, col: Int): Int
 }
@@ -77,15 +77,13 @@ class SqliteResultIterator(db: SqliteDb, private val stmt: Long)
                         case Sqlite3C.TEXT => SqlText(new String(Sqlite3C.column_blob(stmt, i)))
                         case Sqlite3C.BLOB => SqlBlob(Sqlite3C.column_blob(stmt, i))
                         case Sqlite3C.NULL => SqlNull
-                        case _ => sys.error("unsupported type")
+                        case _ => throw SqlException("unsupported type")
                     }
                 }
-            case Sqlite3C.DONE =>
+            case Sqlite3C.DONE | Sqlite3C.OK =>
                 null
-            case Sqlite3C.ERROR =>
-                sys.error("sqlite error: " + db.errmsg)
-            case other =>
-                sys.error("unexpected result: " + other)
+            case rc =>
+                throw SqlException(SqliteDb.errorMessage(db, rc))
         }
     }
 
@@ -102,6 +100,75 @@ class SqliteResultIterator(db: SqliteDb, private val stmt: Long)
 object SqliteDb {
     import Sqlite3C._
     final val BaseFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+    val SQLITE_OK = 0
+    val SQLITE_ERROR = 1
+    val SQLITE_INTERNAL = 2
+    val SQLITE_PERM = 3
+    val SQLITE_ABORT = 4
+    val SQLITE_BUSY = 5
+    val SQLITE_LOCKED = 6
+    val SQLITE_NOMEM = 7
+    val SQLITE_READONLY = 8
+    val SQLITE_INTERRUPT = 9
+    val SQLITE_IOERR = 10
+    val SQLITE_CORRUPT = 11
+    val SQLITE_NOTFOUND = 12
+    val SQLITE_FULL = 13
+    val SQLITE_CANTOPEN = 14
+    val SQLITE_PROTOCOL = 15
+    val SQLITE_EMPTY = 16
+    val SQLITE_SCHEMA = 17
+    val SQLITE_TOOBIG = 18
+    val SQLITE_CONSTRAINT = 19
+    val SQLITE_MISMATCH = 20
+    val SQLITE_MISUSE = 21
+    val SQLITE_NOLFS = 22
+    val SQLITE_AUTH = 23
+    val SQLITE_FORMAT = 24
+    val SQLITE_RANGE = 25
+    val SQLITE_NOTADB = 26
+    val SQLITE_NOTICE = 27
+    val SQLITE_WARNING = 28
+    val SQLITE_ROW = 100
+    val SQLITE_DONE = 101
+    def errorMessage(db: SqliteDb, code: Int) = {
+      val detailed = db.errmsg.trim match { case "" => ""; case m => s"$m\n" }
+      s"${detailed}Error code $code (${resultToMessage(code)})"
+    }
+    def resultToMessage(code: Int) = code match {
+        case SQLITE_OK => "Successful result"
+        case SQLITE_ERROR => "SQL error or missing database"
+        case SQLITE_INTERNAL => "Internal logic error in SQLite"
+        case SQLITE_PERM => "Access permission denied"
+        case SQLITE_ABORT => "Callback routine requested an abort"
+        case SQLITE_BUSY => "The database file is locked"
+        case SQLITE_LOCKED => "A table in the database is locked"
+        case SQLITE_NOMEM => "A malloc() failed"
+        case SQLITE_READONLY => "Attempt to write a readonly database"
+        case SQLITE_INTERRUPT => "Operation terminated by sqlite3_interrupt()"
+        case SQLITE_IOERR => "Some kind of disk I/O error occurred"
+        case SQLITE_CORRUPT => "The database disk image is malformed"
+        case SQLITE_NOTFOUND => "Unknown opcode in sqlite3_file_control()"
+        case SQLITE_FULL => "Insertion failed because database is full"
+        case SQLITE_CANTOPEN => "Unable to open the database file"
+        case SQLITE_PROTOCOL => "Database lock protocol error"
+        case SQLITE_EMPTY => "Database is empty"
+        case SQLITE_SCHEMA => "The database schema changed"
+        case SQLITE_TOOBIG => "String or BLOB exceeds size limit"
+        case SQLITE_CONSTRAINT => "Abort due to constraint violation"
+        case SQLITE_MISMATCH => "Data type mismatch"
+        case SQLITE_MISUSE => "Library used incorrectly"
+        case SQLITE_NOLFS => "Uses OS features not supported on host"
+        case SQLITE_AUTH => "Authorization denied"
+        case SQLITE_FORMAT => "Auxiliary database format error"
+        case SQLITE_RANGE => "2nd parameter to sqlite3_bind out of range"
+        case SQLITE_NOTADB => "File opened that is not a database file"
+        case SQLITE_NOTICE => "Notifications from sqlite3_log()"
+        case SQLITE_WARNING => "Warnings from sqlite3_log()"
+        case SQLITE_ROW => "sqlite3_step() has another row ready"
+        case SQLITE_DONE => "sqlite3_step() has finished executing"
+        case _ => "unknown error"
+    }
 }
 
 class SqliteDb(path: String, flags: Int = SqliteDb.BaseFlags) {
@@ -116,8 +183,8 @@ class SqliteDb(path: String, flags: Int = SqliteDb.BaseFlags) {
     def prepare[R](sql: String)(f: SqliteStatement => R): R = {
         assert(db(0) != 0, "db is closed")
         val stmtPointer = Array(0L)
-        if (Sqlite3C.prepare_v2(db(0), sql, stmtPointer) != Sqlite3C.OK)
-          throw new Exception(errmsg)
+        val rc = Sqlite3C.prepare_v2(db(0), sql, stmtPointer)
+        if (rc != Sqlite3C.OK) throw SqlException(SqliteDb.errorMessage(this, rc))
         val stmt = new SqliteStatement(this, stmtPointer)
         try f(stmt) finally stmt.close
     }
