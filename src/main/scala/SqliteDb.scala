@@ -7,6 +7,10 @@ package org.srhea.scalaqlite
 
 case class SqlException(msg: String) extends RuntimeException(msg)
 
+object SqlValue {
+  val charset = java.nio.charset.Charset.forName("UTF-8")
+}
+
 abstract class SqlValue {
   def toDouble: Double = throw SqlException(s"$this is not a double")
   def toInt: Int = throw SqlException(s"$this is not an int")
@@ -42,7 +46,7 @@ case class SqlBlob(bytes: Seq[Byte]) extends SqlValue {
 }
 case class SqlText(s: String) extends SqlValue {
     override def toString = s
-    override def bindValue(stmt: Long, col: Int) = Sqlite3C.bind_text(stmt, col, s.getBytes("UTF-8"))
+    override def bindValue(stmt: Long, col: Int) = Sqlite3C.bind_text(stmt, col, s.getBytes(SqlValue.charset))
 }
 
 class SqliteStatement(db: SqliteDb, private val stmt: Array[Long]) {
