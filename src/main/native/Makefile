@@ -3,7 +3,7 @@
 #
 # See the file LICENSE included in this distribution for details.
 
-SCALA_VERSION=2.11
+SCALA_VERSION=2.12
 
 ifeq ($(shell uname),Darwin)
 LIBEXT=dylib
@@ -12,7 +12,7 @@ LIBEXT=so
 endif
 
 ifndef JAVA_HOME
-JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-i386
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
 endif
 
 TARGET=libscalaqlite.$(LIBEXT)
@@ -37,4 +37,4 @@ libscalaqlite.dylib: Sqlite3C.cc Sqlite3C.h
 		$< -lsqlite3
 
 Sqlite3C.h: ../../../target/scala-$(SCALA_VERSION)/classes/org/srhea/scalaqlite/Sqlite3C.class
-	javah -classpath ../../../target/scala-$(SCALA_VERSION)/classes org.srhea.scalaqlite.Sqlite3C
+	$(JAVA_HOME)/bin/javah -classpath ../../../target/scala-$(SCALA_VERSION)/classes org.srhea.scalaqlite.Sqlite3C
